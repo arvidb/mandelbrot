@@ -49,10 +49,11 @@ bool initGL(GLFWwindow** window, int& /*out*/screenWidth, int& /*out*/screenHeig
     return true;
 }
 
+
 int main()
 {
-    std::random_device                  rand_dev;
-    std::mt19937                        generator(rand_dev());
+    std::random_device                    rand_dev;
+    std::mt19937                          generator(rand_dev());
     std::uniform_real_distribution<float> distr(0, 1);
     
     int screenWidth, screenHeight;

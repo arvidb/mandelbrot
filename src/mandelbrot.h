@@ -9,6 +9,7 @@
 
 constexpr int kNumberOfMandelbrotTasks = 4;
 constexpr vector2 kDefaultCenter = vector2(-1.2461, -0.0765);
+constexpr float kDefaultScale = 1.0f;
 
 template <typename TFloat>
 class Mandelbrot {
@@ -18,7 +19,7 @@ class Mandelbrot {
 public:
     
     Mandelbrot(int width, int height, int maxIterations = 80)
-        : _width(width), _height(height), _maxIterations(maxIterations), _buffer(width * height, vector3(0, 0, 0))
+        : _width(width), _height(height), _maxIterations(maxIterations), _buffer(width * height)
     {}
     
     void generate() {
@@ -29,14 +30,14 @@ public:
         
         int divWidth = _width / kNumberOfMandelbrotTasks;
         int divHeight = _height / kNumberOfMandelbrotTasks;
-        for (int i=0; i < _width/divWidth; i++) {
-            for (int j=0; j < _height/divHeight; j++) {
+        for (int x=0; x < _width/divWidth; ++x) {
+            for (int y=0; y < _height/divHeight; ++y) {
                 
-                auto f = std::async([=]() { generateSub(
-                                                        i * divWidth,
-                                                        i * divWidth + divWidth,
-                                                        j * divHeight,
-                                                        j * divHeight + divHeight);
+                auto f = std::async([=]() { generate(
+                                                     x * divWidth,
+                                                     x * divWidth + divWidth,
+                                                     y * divHeight,
+                                                     y * divHeight + divHeight);
                 });
                 
                 futures.push_back(std::move(f));
@@ -48,7 +49,7 @@ public:
             f.wait();
         }
         
-        _scale *= 1.5;
+        autoZoom();
         
         if (_autoAdjust) {
             adjustMaxIterations();
@@ -74,7 +75,6 @@ public: // Getters
         return _height;
     }
     
-    
 public: // Setters
     
     void setColor(vector3 rgb) {
@@ -82,6 +82,10 @@ public: // Setters
     }
     
 private:
+    
+    void autoZoom() {
+        _scale *= 1.5;
+    }
     
     void adjustMaxIterations() {
         
@@ -107,7 +111,7 @@ private:
         }
     }
     
-    void generateSub(int x0, int x1, int y0, int y1) {
+    void generate(int x0, int x1, int y0, int y1) {
         
         constexpr auto map = [](TFloat X, TFloat iMin, TFloat iMax, TFloat oMin, TFloat oMax) {
             return ((X - iMin) / (iMax - iMin)) * (oMax - oMin) + oMin;
@@ -128,18 +132,16 @@ private:
                 }
                 
                 if (iteration == _maxIterations) {
-                    _buffer[y * _height + x] = vector3(0, 0, 0);
+                    _buffer[y * _height + x] = vector3(0.0f, 0.0f, 0.0f);
                 }
                 else {
                     
                     TFloat s = iteration - std::log(std::log(std::abs(z))) + 4.0;
                     
-                    auto col = vector3(0, 0, 0);
-                    col.r = 0.5 + 0.5 * std::cos( 3.0 + s*0.15 * _rgb.r);
-                    col.g = 0.5 + 0.5 * std::cos( 3.0 + s*0.15 * _rgb.g);
-                    col.b = 0.5 + 0.5 * std::cos( 3.0 + s*0.15 * _rgb.b);
-                    
-                    _buffer[y * _height + x] = col;
+                    _buffer[y * _height + x] = vector3(
+                                                       0.5f + 0.5f * std::cos( 3.0f + s * 0.15f * _rgb.r ),
+                                                       0.5f + 0.5f * std::cos( 3.0f + s * 0.15f * _rgb.g ),
+                                                       0.5f + 0.5f * std::cos( 3.0f + s * 0.15f * _rgb.b ));
                 }
             }
         }
@@ -150,7 +152,7 @@ private:
     int _maxIterations;
     
     vector2 _center = kDefaultCenter;
-    TFloat _scale = 1.0;
+    TFloat _scale = kDefaultScale;
     
     std::vector<vector3> _buffer;
     vector3 _rgb {0, 0, 0};
